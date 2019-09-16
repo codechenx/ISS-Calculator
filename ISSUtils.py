@@ -10,18 +10,30 @@ class Calculator:
 
     def cal_AIS(self, diagnose_description):
         AIS = {}
-        
-        for body_part, regions in self.criterion_obj.get_critersions().items():
+        re = []
+        diagnose_description = diagnose_description.upper()
+        for body_part, content in self.criterion_obj.get_critersions().items():
+            if any([True if i in diagnose_description else False for i in content["exclude"]]):
+                continue
+            if not any([True if i in diagnose_description else False for i in content["include"]]):
+                continue
             max_score = 0
-            match_str = set()
-            for _, region in regions.items():
-                for score, keywords in region.items():
-                    match = [re.search(keyword, diagnose_description) for keyword in keywords]
-                    match_str = match_str.union(set([i[0] for i in match if i]))
-                    if any(match) and int(score) > max_score:
-                        max_score = int(score)
-            AIS[body_part]  = [max_score, ";".join(match_str)]
-        return AIS
+            max_part = body_part
+            for _score_, _keywords_ in content["score"].items():
+                for _keyword_ in _keywords_:
+                    if isinstance(_keyword_[0][0], list):
+                        for i in _keyword_[0]:
+                            for j in _keyword_[1]:
+                                if i[0] in  diagnose_description and j in diagnose_description and _score_ > max_score:
+                                    max_score = _score_
+                    else:
+                        if all([True if m in diagnose_description else False for m in _keyword_[0]]):
+                            for j in _keyword_[1]:
+                                if j in diagnose_description and _score_ > max_score:
+                                    max_score = _score_
+            
+            re.append([body_part, max_score])
+        return re if re else ["NULL", 0]
     
     def AIS_to_ISS(self, AIS):
         assert isinstance(AIS, dict) and len(AIS) != 0
